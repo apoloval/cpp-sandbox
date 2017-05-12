@@ -33,6 +33,8 @@
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include <thread>
+#include <future>
 
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
@@ -87,30 +89,66 @@ void read(std::vector<row>& rows, const char* filename)
     }
 }
 
-/**
- * calculates 256x256 grid with avg values
- */
-std::vector<grid_pixel> grid(const std::vector<row>& rows)
+void sequential_grid(
+  std::vector<row>::const_iterator begin,
+  std::vector<row>::const_iterator end,
+  std::promise<std::vector<grid_pixel>> promise)
 {
     std::vector<grid_pixel> hist;
     hist.resize(grid_size);
 
-    for(const auto& r: rows)
+    for(auto it = begin; it != end; ++it)
     {
+        const auto& r = *it;
         if (r.x > BBOX[0] && r.x < BBOX[2] && r.y > BBOX[1] && r.y < BBOX[3])
         {
             uint32_t x = resolution_inv * (r.x - BBOX[0]);
             uint32_t y = resolution_inv * (r.y - BBOX[1]);
             grid_pixel& px = hist[x * pixel_resolution + y];
-            if (px.count > 0) {
-              px.avg += (r.amount - px.avg) / (px.count + 1);
-            } else {
-              px.avg = r.amount;
-            }
             ++px.count;
+            px.avg += r.amount;
         }
     }
-    return hist;
+    promise.set_value(hist);
+}
+
+/**
+ * calculates 256x256 grid with avg values
+ */
+std::vector<grid_pixel> grid(const std::vector<row>& rows)
+{
+  std::promise<std::vector<grid_pixel>> result1_promise;
+  auto result1_future = result1_promise.get_future();
+
+  std::promise<std::vector<grid_pixel>> result2_promise;
+  auto result2_future = result2_promise.get_future();
+
+  auto split_size = rows.size() / 2;
+  std::thread worker1(sequential_grid,
+                      rows.begin(),
+                      rows.begin() + split_size,
+                      std::move(result1_promise));
+  std::thread worker2(sequential_grid,
+                      rows.begin() + split_size,
+                      rows.end(),
+                      std::move(result2_promise));
+
+  worker1.join();
+  worker2.join();
+
+  auto result1 = result1_future.get();
+  auto result2 = result2_future.get();
+  std::vector<grid_pixel> result;
+  result.resize(grid_size);
+  for (std::size_t i = 0; i < grid_size; i++) {
+    auto& pixel = result[i], &pixel1 = result1[i], &pixel2 = result2[i];
+    pixel.count = pixel1.count + pixel2.count;
+    if (pixel.count) {
+      pixel.avg = (pixel1.avg + pixel2.avg) / pixel.count;
+    }
+  }
+
+  return result;
 }
 
 /**
