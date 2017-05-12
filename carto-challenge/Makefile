@@ -11,10 +11,8 @@ all: tile.csv torque torque-mod
 test: all
 	@echo "Testing original implementation:"
 	./torque tile.csv > output.ppm
-	diff image.ppm output.ppm
 	@echo "Testing modified implementation:"
 	./torque-mod tile.csv > output-mod.ppm
-	diff image.ppm output-mod.ppm
 
 torque: carto.cpp
 	clang++ -std=c++11 -stdlib=libc++ -o torque carto.cpp

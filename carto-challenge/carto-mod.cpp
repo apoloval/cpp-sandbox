@@ -102,16 +102,12 @@ std::vector<grid_pixel> grid(const std::vector<row>& rows)
             uint32_t x = resolution_inv * (r.x - BBOX[0]);
             uint32_t y = resolution_inv * (r.y - BBOX[1]);
             grid_pixel& px = hist[x * pixel_resolution + y];
+            if (px.count > 0) {
+              px.avg += (r.amount - px.avg) / (px.count + 1);
+            } else {
+              px.avg = r.amount;
+            }
             ++px.count;
-            px.avg += r.amount;
-        }
-    }
-
-    for(auto& px: hist)
-    {
-        if (px.count)
-        {
-            px.avg  /= px.count;
         }
     }
     return hist;
