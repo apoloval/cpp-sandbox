@@ -52,6 +52,8 @@ namespace
     // helper
     const float resolution_inv = 1.0/resolution;
     const int grid_size = pixel_resolution * pixel_resolution;
+
+    const int CONCURRENCY_LEVEL = 3;
 };
 
 struct row
@@ -117,38 +119,43 @@ void sequential_grid(
  */
 std::vector<grid_pixel> grid(const std::vector<row>& rows)
 {
-  std::promise<std::vector<grid_pixel>> result1_promise;
-  auto result1_future = result1_promise.get_future();
+  std::vector<std::promise<std::vector<grid_pixel>>> result_promises(CONCURRENCY_LEVEL);
+  std::vector<std::future<std::vector<grid_pixel>>> result_futures;
+  for (auto& promise : result_promises) {
+    result_futures.push_back(promise.get_future());
+  }
 
-  std::promise<std::vector<grid_pixel>> result2_promise;
-  auto result2_future = result2_promise.get_future();
+  auto split_size = rows.size() / CONCURRENCY_LEVEL;
+  std::vector<std::thread> workers(CONCURRENCY_LEVEL);
+  for (int i = 0; i < CONCURRENCY_LEVEL; i++) {
+    workers[i] = std::thread(sequential_grid,
+                             rows.begin() + split_size * i,
+                             rows.begin() + split_size * (i + 1),
+                             std::move(result_promises[i]));
+  }
 
-  auto split_size = rows.size() / 2;
-  std::thread worker1(sequential_grid,
-                      rows.begin(),
-                      rows.begin() + split_size,
-                      std::move(result1_promise));
-  std::thread worker2(sequential_grid,
-                      rows.begin() + split_size,
-                      rows.end(),
-                      std::move(result2_promise));
+  for (auto& worker : workers) {
+    worker.join();
+  }
 
-  worker1.join();
-  worker2.join();
+  std::vector<std::vector<grid_pixel>> results;
+  for (auto& future : result_futures) {
+    results.push_back(future.get());
+  }
 
-  auto result1 = result1_future.get();
-  auto result2 = result2_future.get();
-  std::vector<grid_pixel> result;
-  result.resize(grid_size);
+  std::vector<grid_pixel> merged_result(grid_size);
   for (std::size_t i = 0; i < grid_size; i++) {
-    auto& pixel = result[i], &pixel1 = result1[i], &pixel2 = result2[i];
-    pixel.count = pixel1.count + pixel2.count;
+    auto& pixel = merged_result[i];
+    for (auto& result : results) {
+      pixel.count += result[i].count;
+      pixel.avg += result[i].avg;
+    }
     if (pixel.count) {
-      pixel.avg = (pixel1.avg + pixel2.avg) / pixel.count;
+      pixel.avg /= pixel.count;
     }
   }
 
-  return result;
+  return merged_result;
 }
 
 /**
