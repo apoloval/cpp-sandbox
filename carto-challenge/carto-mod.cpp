@@ -94,7 +94,6 @@ std::vector<grid_pixel> grid(const std::vector<row>& rows)
 {
     std::vector<grid_pixel> hist;
     hist.resize(grid_size);
-    uint32_t count = 0;
 
     for(const auto& r: rows)
     {
@@ -105,7 +104,6 @@ std::vector<grid_pixel> grid(const std::vector<row>& rows)
             grid_pixel& px = hist[x * pixel_resolution + y];
             ++px.count;
             px.avg += r.amount;
-            ++count;
         }
     }
 
