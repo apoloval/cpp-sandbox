@@ -154,11 +154,14 @@ int main (int argc, char** argv)
     // load rows, it will take some time, you do **not** need to optimize this part
     read(rows, argv[1]);
 
-    std::cerr << "Loaded " << rows.size() << "rows " << std::endl;
-    high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    std::vector<grid_pixel> g = grid(rows);
-    high_resolution_clock::time_point t2 = high_resolution_clock::now();
-    std::cerr << "Time: " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
+    std::vector<grid_pixel> g;
+    for (int i = 0; i < 5; i++) {
+      std::cerr << "Loaded " << rows.size() << "rows " << std::endl;
+      high_resolution_clock::time_point t1 = high_resolution_clock::now();
+      g = grid(rows);
+      high_resolution_clock::time_point t2 = high_resolution_clock::now();
+      std::cerr << "Time: " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
+    }
 
     write_ppm(g);
     return 0;
