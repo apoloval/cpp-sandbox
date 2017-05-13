@@ -53,7 +53,7 @@ namespace
     const float resolution_inv = 1.0/resolution;
     const int grid_size = pixel_resolution * pixel_resolution;
 
-    const int CONCURRENCY_LEVEL = 3;
+    const int CONCURRENCY_LEVEL = 2;
 };
 
 struct row
