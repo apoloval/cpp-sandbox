@@ -1,3 +1,5 @@
+CPP_FLAGS=-std=c++11
+
 define MISSING_DATASET_MSG
 You have to download the dataset file first.
 Follow this link and save the file in this directory with name 'tile.csv'")
@@ -15,10 +17,13 @@ test: all
 	./torque-mod tile.csv > output-mod.ppm
 
 torque: carto.cpp
-	clang++ -std=c++11 -stdlib=libc++ -o torque carto.cpp
+	${CXX} ${CPP_FLAGS} -o torque carto.cpp
 
 torque-mod: carto-mod.cpp
-	clang++ -std=c++11 -stdlib=libc++ -o torque-mod carto-mod.cpp
+	${CXX} ${CPP_FLAGS} -o torque-mod carto-mod.cpp
 
 tile.csv:
 	$(error ${MISSING_DATASET_MSG})
+
+.PHONY clean:
+	rm -f torque torque-mod output*
