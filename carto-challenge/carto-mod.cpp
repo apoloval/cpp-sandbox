@@ -82,11 +82,7 @@ void read(std::vector<row>& rows, const char* filename)
     while (std::getline(file, line))
     {
         row r;
-        std::istringstream iss(line);
-        if (!(iss >> r.amount >> r.y >> r.x))
-        {
-            break;
-        }
+        std::sscanf(line.c_str(), "%f %f %f", &r.amount, &r.y, &r.x);
         rows.push_back(r);
     }
 }
@@ -191,6 +187,8 @@ int main (int argc, char** argv)
     }
 
     std::vector<row> rows;
+    // Reserve space to reduce the number of reallocations
+    rows.reserve(10000000);
 
     // load rows, it will take some time, you do **not** need to optimize this part
     read(rows, argv[1]);
